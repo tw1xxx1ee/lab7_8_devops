@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+  labels:
+    app: my-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: my-app
+          image: tw1xx1ee/my-app:IMAGE_TAG
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: MONGO_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: MONGO_HOST
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-user
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-password
+            - name: MONGO_URL
+              value: "mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@$(MONGO_HOST):27017"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10

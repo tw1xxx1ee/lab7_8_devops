@@ -1,0 +1,55 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: app-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: app.rules
+      interval: 30s
+      rules:
+        - alert: AppPodNotRunning
+          expr: |
+            kube_deployment_status_replicas_available{deployment="app-deployment"} < 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Приложение недоступно"
+            description: "Нет доступных реплик app-deployment более 1 минуты"
+
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Высокий процент ошибок"
+            description: "Более 5% запросов завершаются ошибкой 5xx"
+
+        - alert: HighResponseTime
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Высокое время ответа"
+            description: "p95 времени ответа превышает 1 секунду"
+
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="default"}[10m]) > 3
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod перезапускается"
+            description: "Pod {{ $labels.pod }} перезапустился более 3 раз за 10 минут"
