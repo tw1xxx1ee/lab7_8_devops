@@ -69,7 +69,7 @@ jobs:
           QUERY='sum(rate(http_requests_total{status_code=~"5.."}[2m]))/sum(rate(http_requests_total[2m]))'
           RESPONSE=$(curl -sG --data-urlencode "query=$QUERY" http://localhost:19090/api/v1/query)
           kill $PF_PID 2>/dev/null || true
-          ERROR_RATE=$(echo "$RESPONSE" | /opt/homebrew/bin/jq -r '.data.result[0].value[1] // "0"')
+          ERROR_RATE=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1] // "0"')
           echo "Current error rate: $ERROR_RATE"
           BAD=$(awk "BEGIN { print ($ERROR_RATE > 0.05) }")
           if [ "$BAD" = "1" ]; then
